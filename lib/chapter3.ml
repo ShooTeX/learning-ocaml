@@ -91,8 +91,10 @@ let get_full_name student = (student.first_name, student.last_name)
 let create_student first_name last_name gpa = { first_name; last_name; gpa }
 
 (* Exercise: pokerecord *)
-type poketype = Normal | Fire | Water
+type poketype = Normal | Fire | Water [@@deriving compare, sexp]
+
 type pokemon = { name : string; hp : int; ptype : poketype }
+[@@deriving compare, sexp]
 
 let charizard = { name = "charizard"; hp = 78; ptype = Fire }
 let squirtle = { name = "squirtle"; hp = 44; ptype = Water }
@@ -108,6 +110,9 @@ let rec max_hp = function
       match max_hp t with
       | None -> Some a
       | Some b -> Some (if a.hp >= b.hp then a else b))
+
+(* Exercise: date before *)
+type date = int * int * int
 
 (************ tests ************)
 let%test_unit "Exercise: list expressions" =
@@ -215,3 +220,13 @@ let%test_unit " Exercise: safe hd and tl " =
 
   [%test_eq: int list option] (safe_tl [ 1; 2 ]) (Some [ 2 ]);
   [%test_eq: int option] (safe_hd []) None
+
+let%test_unit "Exercise: pokefun" =
+  let other = { name = "other"; hp = 100; ptype = Normal } in
+  [%test_eq: pokemon option]
+    (max_hp [ charizard; squirtle; other ])
+    (Some other);
+  [%test_eq: pokemon option]
+    (max_hp [ other; squirtle; charizard ])
+    (Some other);
+  [%test_eq: pokemon option] (max_hp []) None
