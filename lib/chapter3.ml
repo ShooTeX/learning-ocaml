@@ -114,7 +114,106 @@ let rec max_hp = function
 (* Exercise: date before *)
 type date = int * int * int
 
-(************ tests ************)
+let is_before a b =
+  let y1, m1, d1 = a in
+  let y2, m2, d2 = b in
+  y1 < y2 || (y1 = y2 && m1 < m2) || (y1 = y2 && m1 = m2 && d1 < d2)
+
+(* Exercise: earliest date *)
+let rec earliest = function
+  | [] -> None
+  | a :: t -> (
+      match earliest t with
+      | None -> Some a
+      | Some b -> Some (if is_before a b then a else b))
+
+(* Exercise: assoc list *)
+let insert k v lst = (k, v) :: lst
+
+let rec lookup k = function
+  | [] -> None
+  | (k', v) :: t -> if k = k' then Some v else lookup k t
+
+let assoc_list =
+  [] |> insert "one" 1 |> insert "two" 2 |> insert "three" 3 |> insert "four" 4
+
+let lookup_two = lookup "two" assoc_list
+let lookup_four = lookup "four" assoc_list
+
+(* Exercise: cards *)
+type suit = Hearts | Spades | Clubs | Diamonds
+type rank = Number of int | Ace | Jack | Queen | King
+type card = { suit : suit; rank : rank }
+
+let ace_clubs = { suit = Clubs; rank = Ace }
+let queen_hearts = { suit = Hearts; rank = Queen }
+let two_diamonds = { suit = Diamonds; rank = Number 2 }
+let seven_spades = { suit = Spades; rank = Number 7 }
+
+(* Exercise: quadrant *)
+type quad = I | II | III | IV [@@deriving compare, sexp]
+type sign = Neg | Zero | Pos
+
+let sign x = if x < 0 then Neg else if x > 0 then Pos else Zero
+
+let quadrant x y =
+  match (sign x, sign y) with
+  | Pos, Pos -> Some I
+  | Neg, Pos -> Some II
+  | Neg, Neg -> Some III
+  | Pos, Neg -> Some IV
+  | _ -> None
+
+(* Exercise: quadrant when *)
+let quadrant_when = function
+  | x, y when x > 0 && y > 0 -> Some I
+  | x, y when x < 0 && y > 0 -> Some II
+  | x, y when x < 0 && y < 0 -> Some III
+  | x, y when x > 0 && y < 0 -> Some IV
+  | _ -> None
+
+(* Exercise: depth *)
+type 'a tree = Leaf | Node of 'a * 'a tree * 'a tree
+
+let rec depth = function
+  | Leaf -> 0
+  | Node (_, left, right) -> 1 + max (depth left) (depth right)
+
+(* Exercise: shape *)
+let rec same_shape t1 t2 =
+  match (t1, t2) with
+  | Leaf, Leaf -> true
+  | Node (_, left1, right1), Node (_, left2, right2) ->
+      same_shape left1 left2 && same_shape right1 right2
+  | _ -> false
+
+(* Exercise: list max exn *)
+let list_max = function
+  | [] -> failwith "list_max"
+  | h :: t -> List.fold_left max h t
+
+(* Exercise: list max exn string *)
+let list_max_string lst =
+  try string_of_int (list_max lst) with Failure _ -> "empty"
+
+(* Exercise: is_bst *)
+(* TODO: some day :D  *)
+
+(* Exercise: quadrant poly *)
+(* Modify your definition of quadrant to use polymorphic variants. The types of your functions should become these: *)
+let sign_poly x = if x < 0 then `Neg else if x > 0 then `Pos else `Zero
+
+let quadrant' (x, y) =
+  match (sign_poly x, sign_poly y) with
+  | `Pos, `Pos -> Some `I
+  | `Neg, `Pos -> Some `II
+  | `Neg, `Neg -> Some `III
+  | `Pos, `Neg -> Some `IV
+  | _ -> None
+
+(*******************************)
+(************ TESTS ************)
+(*******************************)
 let%test_unit "Exercise: list expressions" =
   [%test_eq: int list] lst [ 1; 2; 3; 4; 5 ];
   [%test_eq: int list] lst3 [ 1; 2; 3; 4; 5 ]
@@ -230,3 +329,102 @@ let%test_unit "Exercise: pokefun" =
     (max_hp [ other; squirtle; charizard ])
     (Some other);
   [%test_eq: pokemon option] (max_hp []) None
+
+let%test_unit "Exercise: date before" =
+  [%test_eq: bool] (is_before (2022, 2, 2) (2023, 2, 2)) true;
+  [%test_eq: bool] (is_before (2023, 1, 2) (2023, 2, 2)) true;
+  [%test_eq: bool] (is_before (2023, 2, 1) (2023, 2, 2)) true;
+  [%test_eq: bool] (is_before (2023, 2, 2) (2023, 2, 2)) false;
+  [%test_eq: bool] (is_before (2024, 2, 2) (2023, 2, 2)) false;
+  [%test_eq: bool] (is_before (2023, 2, 2) (2023, 1, 2)) false;
+  [%test_eq: bool] (is_before (2023, 2, 2) (2023, 2, 1)) false
+
+let%test_unit "Exercise: earliest date" =
+  [%test_eq: (int * int * int) option] (earliest []) None;
+  [%test_eq: (int * int * int) option]
+    (earliest [ (2023, 5, 10) ])
+    (Some (2023, 5, 10));
+  [%test_eq: (int * int * int) option]
+    (earliest [ (2023, 5, 10); (2022, 5, 10) ])
+    (Some (2022, 5, 10));
+  [%test_eq: (int * int * int) option]
+    (earliest [ (2023, 5, 10); (2022, 5, 10); (2023, 5, 10) ])
+    (Some (2022, 5, 10))
+
+let%test_unit "Exercise: assoc list" =
+  [%test_eq: int option] lookup_two (Some 2);
+  [%test_eq: int option] lookup_four (Some 4)
+
+let%test_unit "Exercise: quadrant" =
+  [%test_eq: quad option] (quadrant 1 1) (Some I);
+  [%test_eq: quad option] (quadrant (-1) 1) (Some II);
+  [%test_eq: quad option] (quadrant (-1) (-1)) (Some III);
+  [%test_eq: quad option] (quadrant 1 (-1)) (Some IV);
+  [%test_eq: quad option] (quadrant 0 1) None;
+  [%test_eq: quad option] (quadrant 1 0) None;
+  [%test_eq: quad option] (quadrant 0 0) None;
+  [%test_eq: quad option] (quadrant 0 (-1)) None;
+  [%test_eq: quad option] (quadrant (-1) 0) None
+
+let%test_unit "Exercise: quadrant when" =
+  [%test_eq: quad option] (quadrant_when (1, 1)) (Some I);
+  [%test_eq: quad option] (quadrant_when (-1, 1)) (Some II);
+  [%test_eq: quad option] (quadrant_when (-1, -1)) (Some III);
+  [%test_eq: quad option] (quadrant_when (1, -1)) (Some IV);
+  [%test_eq: quad option] (quadrant_when (0, 1)) None;
+  [%test_eq: quad option] (quadrant_when (1, 0)) None;
+  [%test_eq: quad option] (quadrant_when (0, 0)) None;
+  [%test_eq: quad option] (quadrant_when (0, -1)) None;
+  [%test_eq: quad option] (quadrant_when (-1, 0)) None
+
+let%test_unit "Exercise: depth" =
+  [%test_eq: int] (depth Leaf) 0;
+  [%test_eq: int] (depth (Node (1, Leaf, Leaf))) 1;
+  [%test_eq: int] (depth (Node (1, Node (2, Leaf, Leaf), Leaf))) 2;
+  [%test_eq: int]
+    (depth (Node (1, Node (2, Leaf, Leaf), Node (3, Leaf, Leaf))))
+    2;
+  [%test_eq: int]
+    (depth
+       (Node
+          ( 1,
+            Node (2, Node (3, Leaf, Leaf), Leaf),
+            Node (4, Node (5, Leaf, Leaf), Leaf) )))
+    3
+
+let%test_unit "Exercise: shape" =
+  [%test_eq: bool] (same_shape Leaf Leaf) true;
+  [%test_eq: bool] (same_shape Leaf (Node (1, Leaf, Leaf))) false;
+  [%test_eq: bool]
+    (same_shape (Node (1, Leaf, Leaf)) (Node (1, Leaf, Leaf)))
+    true;
+  [%test_eq: bool]
+    (same_shape (Node (1, Leaf, Leaf)) (Node (1, Node (2, Leaf, Leaf), Leaf)))
+    false;
+  [%test_eq: bool]
+    (same_shape (Node (1, Node (2, Leaf, Leaf), Leaf)) (Node (1, Leaf, Leaf)))
+    false;
+  [%test_eq: bool]
+    (same_shape
+       (Node (1, Node (2, Leaf, Leaf), Node (3, Leaf, Leaf)))
+       (Node (1, Node (2, Leaf, Leaf), Node (3, Leaf, Leaf))))
+    true;
+  [%test_eq: bool]
+    (same_shape
+       (Node (1, Node (2, Leaf, Leaf), Node (3, Leaf, Leaf)))
+       (Node (1, Node (2, Leaf, Leaf), Node (3, Leaf, Node (4, Leaf, Leaf)))))
+    false
+
+let%test_unit "Exercise: list max exn" =
+  [%test_eq: int] (list_max [ 1; 2; 3; 4; 5 ]) 5;
+  [%test_eq: int] (list_max [ 5 ]) 5
+
+let%expect_test "Exercise: list max exn" =
+  try ignore (list_max [])
+  with Failure msg ->
+    Printf.printf "%s\n" msg;
+    [%expect {| list_max |}]
+
+let%test_unit "Exercise: list max exn string" =
+  [%test_eq: string] (list_max_string []) "empty";
+  [%test_eq: string] (list_max_string [ 1; 2; 3; 4; 5 ]) "5"
