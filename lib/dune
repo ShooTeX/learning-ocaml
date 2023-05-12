@@ -1,4 +1,5 @@
 (library
  (name cs3110)
+ (libraries core)
  (preprocess (pps ppx_sexp_conv ppx_inline_test ppx_expect ppx_compare ppx_assert))
  (inline_tests))
